@@ -5,8 +5,8 @@ from enum import Enum
 import subprocess
 import struct
 from model.device_model import ConnectedDevice
-from model.json_parser import parse_json_for_config, ToSDK
 from model.enums import Enums as E
+import json
 
 class DynAttr:
 
@@ -112,24 +112,123 @@ class JsonDevice(ConnectedDevice):
             return None
 
     def __init__(self, conf_file):
-        parsed_json: dict = parse_json_for_config(conf_file)
+    
+        j: json = None
+        with open(conf_file, "r", encoding="utf-8") as file:
+            f_contents = file.read()
+            j = json.loads(f_contents)
 
-        # Construct DynAttrs from json 
-        for attr in parsed_json[ToSDK.Credentials.attributes]:
-            m_att = DynAttr(attr[ToSDK.Attributes.name],attr[ToSDK.Attributes.private_data],attr[ToSDK.Attributes.private_data_type])
+        test = 'duid'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'cpid'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'env'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'iotc_server_cert'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'sdk_id'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'discovery_url'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'connection_type'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'auth'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'auth_type'
+        if test not in j['auth']:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'params'
+        if test not in j['auth']:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'device'
+        if test not in j:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'commands_list_path'
+        if test not in j['device']:
+            raise ValueError(f"ERROR - {test} not in json")
+        
+        test = 'attributes'
+        if test not in j['device']:
+            raise ValueError(f"ERROR - {test} not in json")
+
+        auth_type = j['auth']['auth_type']
+        discovery_url = j['discovery_url']
+        sdk_id = j['sdk_id']
+        iotc_server_cert = j['iotc_server_cert']
+        env = j['env']
+        cpid = j['cpid']
+        duid = j['duid']
+        commands_list_path = j['device']['commands_list_path'] 
+
+        connection_type = j['connection_type']
+        pf = ""
+        if connection_type == "IOTC_CT_AZURE":
+            pf = "az"
+        if connection_type == "IOTC_CT_AWS":
+            pf = "aws"
+
+        attributes = j['device']['attributes']
+        for attr in attributes:
+            m_att = DynAttr(attr["name"],attr["private_data"],attr["private_data_type"])
             self.attributes.append(m_att)
+        
+        sdk_options = {}
+        sdk_options.update({'cpid': cpid})
 
+        # sdk_id causes problems for now
+        # sdk_options.update({'sId': sdk_id})
+
+        sdk_options.update({'env': env})
+        sdk_options.update({'pf': pf})
+        sdk_options.update({'discoveryUrl' : discovery_url})
+
+        if auth_type == "IOTC_AT_X509":
+            test = 'client_key'
+            if test not in j['auth']['params']:
+                raise ValueError(f"ERROR - {test} not in json")
+            
+            test = 'client_cert'
+            if test not in j['auth']['params']:
+                raise ValueError(f"ERROR - {test} not in json")
+            
+            client_key = j['auth']['params']['client_key']
+            client_cert = j['auth']['params']['client_cert']
+            
+            certificate = { 
+                "SSLKeyPath"  : client_key,
+                "SSLCertPath" : client_cert,
+                "SSLCaPath"   : iotc_server_cert,
+            }
+            sdk_options.update({"certificate" : certificate})
+            
         super().__init__(
-            parsed_json[ToSDK.Credentials.company_id],
-            parsed_json[ToSDK.Credentials.unique_id],
-            parsed_json[ToSDK.Credentials.environment],
-            parsed_json[ToSDK.Credentials.sdk_id],
-            parsed_json[ToSDK.Credentials.sdk_options]
+            company_id=cpid,
+            unique_id=duid,
+            environment=env,
+            sdk_id=sdk_id,
+            sdk_options=sdk_options
         )
-        # make accessible to any inheriting classes
-        self.parsed_json = parsed_json
 
-        self.SCRIPTS_PATH = self.parsed_json[ToSDK.Credentials.commands_list_path]
+        self.SCRIPTS_PATH = commands_list_path
         self.get_all_scripts()
 
 

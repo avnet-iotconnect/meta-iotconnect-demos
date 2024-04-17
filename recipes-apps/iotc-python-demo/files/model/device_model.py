@@ -67,8 +67,8 @@ class ConnectedDevice(GenericDevice):
     def connect(self):
         self.SdkClient = IoTConnectSDK(
             uniqueId=self.unique_id,
-            sId=self.sdk_id,
-            #cpid=self.company_id,
+            # sId=self.sdk_id,
+            # cpid=self.company_id,
             #env=self.environment,
             sdkOptions=self.SdkOptions,
             initCallback=self.init_cb)
