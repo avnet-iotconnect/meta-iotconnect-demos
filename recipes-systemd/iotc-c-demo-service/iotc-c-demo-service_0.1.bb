@@ -8,7 +8,7 @@ SYSTEMD_SERVICE:${PN} = "iotc-c-demo.service"
 
 SRC_URI = "file://iotc-c-demo.service"
 
-FILES:${PN} = "${systemd_unitdir}/system/iotc-c-demo.service"
+FILES_${PN} = "${systemd_unitdir}/system/iotc-c-demo.service"
 
 do_install() {
   install -d ${D}/${systemd_unitdir}/system

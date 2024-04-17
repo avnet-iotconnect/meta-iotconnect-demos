@@ -4,8 +4,8 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 DEPENDS += " iotc-c-sdk"
-RDEPENDS:${PN} += " bash"
-RDEPENDS:${PN} += " iotc-c-demo-service"
+RDEPENDS_${PN} += " bash"
+RDEPENDS_${PN} += " iotc-c-demo-service"
 PROVIDES = "${PN} ${PN}-dev"
 
 SRC_URI = "file://src/"
@@ -22,12 +22,12 @@ PACKAGES = "${PN} ${PN}-dev ${PN}-dbg ${PN}-staticdev"
 APP_INSTALL_DIR = "${base_prefix}/usr/iotc/bin/iotc-c-sdk"
 # PRIVATE_DATA_DIR = "${base_prefix}/usr/iotc-c/local"
 
-# FILES:${PN}-dev = "${PRIVATE_DATA_DIR}/* \
+# FILES_${PN}-dev = "${PRIVATE_DATA_DIR}/* \
 # "
 
-FILES:${PN} += "${APP_INSTALL_DIR}/*"
+FILES_${PN} += "${APP_INSTALL_DIR}/*"
 
-cmake_do_generate_toolchain_file:append() {
+cmake_do_generate_toolchain_file_append() {
 	cat >> ${WORKDIR}/toolchain.cmake <<EOF
 $cmake_crosscompiling
 
