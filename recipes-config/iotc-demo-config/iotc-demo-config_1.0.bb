@@ -12,7 +12,6 @@ FILES_${PN} += "${APP_INSTALL_DIR}/*"
 
 do_install() {
     install -d ${D}${APP_INSTALL_DIR}/
-    install -d ${D}${APP_INSTALL_DIR}/local
 
-    cp -R --no-preserve=ownership ${WORKDIR}/config-data/* ${D}${APP_INSTALL_DIR}/local/
+    cp -R --no-preserve=ownership ${WORKDIR}/config-data/* ${D}${APP_INSTALL_DIR}/
 }
