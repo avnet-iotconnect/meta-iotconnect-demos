@@ -13,14 +13,13 @@
     "_comment_iotc_server_cert":"Path to Global root cert, different depending on AWS/Azure instance",
     "iotc_server_cert": "/etc/ssl/certs/...",
 
-    "_comment_sdk_id": "'SDK Identities -> Language: Python **, Version: 1.0' from portal's Key Vault, needed for Python SDK",
-    
+    "_comment_sdk_id": "'SDK Identities -> Language: Python **, Version: 1.0' from portal's Key Vault, only needed for Python SDK",
     "sdk_id": "",
 
     "_comment_discovery_url": "depending on the url, it will connect to either Azure or AWS instance, only used for Python SDK",
     "discovery_url": "",
 
-    "_comment_connection_type": "use IOTC_CT_AZURE or IOTC_CT_AWS to select connection type, only used for the C SDK",
+    "_comment_connection_type": "use IOTC_CT_AZURE or IOTC_CT_AWS to select connection type",
     "connection_type": "IOTC_CT_AZURE",
     
     "auth": {
