@@ -4,8 +4,8 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 DEPENDS += " iotc-c-sdk"
-RDEPENDS:${PN} += " bash"
-RDEPENDS:${PN} += " iotc-c-demo-service"
+DEPENDS += " iotc-c-demo-service"
+RDEPENDS_${PN} += " bash"
 PROVIDES = "${PN} ${PN}-dev"
 
 SRC_URI = "file://src/"
@@ -16,6 +16,7 @@ SRCREV="${AUTOREV}"
 S="${WORKDIR}/src"
 
 inherit cmake
+EXTRA_OECMAKE += "-DCMAKE_SKIP_RPATH=TRUE"
 
 PACKAGES = "${PN} ${PN}-dev ${PN}-dbg ${PN}-staticdev"
 
