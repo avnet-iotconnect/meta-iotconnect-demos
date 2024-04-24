@@ -1,0 +1,3 @@
+[submodule "recipes-apps/iotc-c-demo/files/src/iotc-generic-c-sdk"]
+	path = recipes-apps/iotc-c-demo/files/src/iotc-generic-c-sdk
+	url = git@github.com:avnet-iotconnect/iotc-generic-c-sdk.git

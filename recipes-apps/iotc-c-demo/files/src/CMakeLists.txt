@@ -6,7 +6,12 @@ project(iotc-c-demo)
 add_compile_options(-DIOTCL_USER_CONFIG_FILE=\"iotcl_config.h\" -I${CMAKE_CURRENT_SOURCE_DIR}/)
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../iotc-generic-c-sdk SdkSources)
-add_subdirectory(${IOTC_C_SDK_DIR} SdkSources)
+
+# uncomment line below for local development
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/iotc-generic-c-sdk/iotc-generic-c-sdk SdkSources)
+
+# comment the line below when working in local development environment, reverse these changes to make make it buildable again in yocto.
+# add_subdirectory(${IOTC_C_SDK_DIR} SdkSources)
 
 
 # adding this for cleanness but the add_compile_options above already took care of it
