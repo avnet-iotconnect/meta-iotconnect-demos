@@ -14,4 +14,6 @@ do_install() {
     install -d ${D}${APP_INSTALL_DIR}/
 
     cp -R --no-preserve=ownership ${WORKDIR}/config-data/* ${D}${APP_INSTALL_DIR}/
+
+    rm -rf ${D}${APP_INSTALL_DIR}/certs/.gitkeep
 }
