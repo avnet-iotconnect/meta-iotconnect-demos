@@ -1,0 +1,119 @@
+{
+    "code": "evcharger",
+    "name": "evcharger",
+    "authType": 2,
+    "attributes": [
+        {
+            "name": "charge_completed",
+            "type": "BIT",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_max_mWh",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "standard_cents_per_Wh",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_charge_config",
+            "type": "STRING",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_mode",
+            "type": "STRING",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "total_earnings",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_charge_current_value",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_start_mWh",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "total_sessions",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_charge_earnings",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "fast_cents_per_Wh",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "total_supplied_energy",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "current_charge_percentage_done",
+            "type": "INTEGER",
+            "description": null,
+            "unit": null
+        },
+        {
+            "name": "location",
+            "type": "LATLONG",
+            "description": null,
+            "unit": null
+        }
+    ],
+    "commands": [
+        {
+            "name": "set fast charging price (in cents)",
+            "command": "set_fast_price.sh",
+            "requiredParam": true,
+            "requiredAck": true,
+            "isOTACommand": false
+        },
+        {
+            "name": "set standard charging price (in cents)",
+            "command": "set_standard_price.sh",
+            "requiredParam": true,
+            "requiredAck": true,
+            "isOTACommand": false
+        }
+    ],
+    "messageVersion": "2.1",
+    "msgCode": "XG4EJWA",
+    "greenGrass": "0",
+    "wireless": "0",
+    "properties": {
+        "description": null,
+        "dataFrequency": "5",
+        "fileSupport": false
+    },
+    "_meta": {
+        "version": "2.0"
+    }
+}

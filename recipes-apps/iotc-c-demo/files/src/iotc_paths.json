@@ -1,0 +1,8 @@
+{
+    "iotc_root_ca_path_az": "/etc/ssl/certs/DigiCert_Global_Root_CA.pem",
+    "iotc_root_ca_path_aws": "/etc/ssl/certs/Amazon_Root_CA_1.pem",
+    "iotc_x509_client_key_path": "/home/akarnil/work/meta-iotconnect-demos/recipes-apps/iotc-c-demo/files/src/credentials.json",
+    "iotc_x509_client_cert_path": "/home/akarnil/work/meta-iotconnect-demos/recipes-scripts/iotc-demo-scripts/files/scripts",
+    "iotc_commands_path": "/home/akarnil/work/meta-iotconnect-demos/recipes-scripts/iotc-demo-scripts/files/scripts",
+    "iotc_telemetry_path": "/home/akarnil/work/meta-iotconnect-demos/recipes-scripts/iotc-demo-scripts/files/scripts"
+}
