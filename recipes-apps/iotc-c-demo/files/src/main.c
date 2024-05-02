@@ -89,6 +89,30 @@ static void free_local_data()
     free(iotc_telemetry_path);
 }
 
+static void cleanup_string(char** ptr)
+{
+    printf("calling %s\n", __func__);
+    free(*ptr);
+}
+
+static void cleanup_FD(FILE** ptr)
+{
+    printf("calling %s\n", __func__);
+    fclose(*ptr);
+}
+
+static void cleanup_cJSON(cJSON** ptr)
+{
+    printf("calling %s\n", __func__);
+    cJSON_Delete(*ptr);
+}
+
+static void cleanup_DIR(DIR** ptr)
+{
+    printf("calling %s\n", __func__);
+    closedir(*ptr);
+}
+
 typedef struct telemetry_attribute
 {
     char *name;
@@ -338,7 +362,7 @@ static bool string_ends_with(const char *needle, const char *haystack)
 static int parse_raw_json_to_string(char *output, const char *const raw_json_str, char *key)
 {
     const cJSON *value = NULL;
-    cJSON *json = cJSON_Parse(raw_json_str);
+    cJSON __attribute__((__cleanup__(cleanup_cJSON))) *json = cJSON_Parse(raw_json_str);
     if (json == NULL)
     {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -346,7 +370,6 @@ static int parse_raw_json_to_string(char *output, const char *const raw_json_str
         {
             fprintf(stderr, "Error before: %s\n", error_ptr);
         }
-        cJSON_Delete(json);
         return EXIT_FAILURE;
     }
 
@@ -355,11 +378,9 @@ static int parse_raw_json_to_string(char *output, const char *const raw_json_str
     {
         strncpy(output, value->valuestring, strlen(value->valuestring));
 
-        cJSON_Delete(json);
         return EXIT_SUCCESS;
     }
 
-    cJSON_Delete(json);
     printf("failed to get \"%s\" from json\n", key);
     return EXIT_FAILURE;
 }
@@ -367,7 +388,7 @@ static int parse_raw_json_to_string(char *output, const char *const raw_json_str
 static int parse_raw_json_to_int(int *output, const char *const raw_json_str, char *key)
 {
     const cJSON *value = NULL;
-    cJSON *json = cJSON_Parse(raw_json_str);
+    cJSON __attribute__((__cleanup__(cleanup_cJSON))) *json = cJSON_Parse(raw_json_str);
     if (json == NULL)
     {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -375,7 +396,6 @@ static int parse_raw_json_to_int(int *output, const char *const raw_json_str, ch
         {
             fprintf(stderr, "Error before: %s\n", error_ptr);
         }
-        cJSON_Delete(json);
         return EXIT_FAILURE;
     }
 
@@ -384,11 +404,9 @@ static int parse_raw_json_to_int(int *output, const char *const raw_json_str, ch
     {
         *output = value->valueint;
 
-        cJSON_Delete(json);
         return EXIT_SUCCESS;
     }
 
-    cJSON_Delete(json);
     printf("failed to get \"%s\" from json\n", key);
     return EXIT_FAILURE;
 }
@@ -396,7 +414,7 @@ static int parse_raw_json_to_int(int *output, const char *const raw_json_str, ch
 static int parse_raw_json_to_alloc_string(char **output, const char *const raw_json_str, char *key)
 {
     const cJSON *value = NULL;
-    cJSON *json = cJSON_Parse(raw_json_str);
+    cJSON __attribute__((__cleanup__(cleanup_cJSON))) *json = cJSON_Parse(raw_json_str);
     if (json == NULL)
     {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -404,7 +422,6 @@ static int parse_raw_json_to_alloc_string(char **output, const char *const raw_j
         {
             fprintf(stderr, "Error before: %s\n", error_ptr);
         }
-        cJSON_Delete(json);
         return EXIT_FAILURE;
     }
 
@@ -414,18 +431,15 @@ static int parse_raw_json_to_alloc_string(char **output, const char *const raw_j
         *output = calloc(strlen(value->valuestring) + 1, sizeof(char));
         if (!*output)
         {
-            cJSON_Delete(json);
             printf("failed to get alloc string\n");
             return EXIT_FAILURE;
         }
 
         strncpy(*output, value->valuestring, strlen(value->valuestring));
 
-        cJSON_Delete(json);
         return EXIT_SUCCESS;
     }
 
-    cJSON_Delete(json);
     printf("failed to get \"%s\" from json\n", key);
     return EXIT_FAILURE;
 }
@@ -433,7 +447,7 @@ static int parse_raw_json_to_alloc_string(char **output, const char *const raw_j
 static int is_key_in_json(const char *const raw_json_str, char *key)
 {
     const cJSON *value = NULL;
-    cJSON *json = cJSON_Parse(raw_json_str);
+    cJSON __attribute__((__cleanup__(cleanup_cJSON))) *json = cJSON_Parse(raw_json_str);
     if (json == NULL)
     {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -441,24 +455,20 @@ static int is_key_in_json(const char *const raw_json_str, char *key)
         {
             fprintf(stderr, "Error before: %s\n", error_ptr);
         }
-        cJSON_Delete(json);
         return EXIT_FAILURE;
     }
 
     value = cJSON_GetObjectItemCaseSensitive(json, key);
     if (value)
     {
-        cJSON_Delete(json);
         return EXIT_SUCCESS;
     }
     if (cJSON_IsString(value) && (value->valuestring != NULL))
     {
         // strncpy(output,value->valuestring, strlen(value->valuestring));
-        cJSON_Delete(json);
         return EXIT_SUCCESS;
     }
 
-    cJSON_Delete(json);
     printf("failed to get \"%s\" from json\n", key);
     return EXIT_FAILURE;
 }
@@ -486,7 +496,7 @@ static int init_scripts()
         return EXIT_FAILURE;
     }
 
-    DIR *dir;
+    DIR __attribute__((__cleanup__(cleanup_DIR))) *dir = NULL;
     struct dirent *entry;
     if ((dir = opendir(commands_list_path)) == NULL)
     {
@@ -502,7 +512,6 @@ static int init_scripts()
         }
         available_scripts_count++;
     }
-    closedir(dir);
 
     // Re-read the dir to reset to seek back to the start
     if ((dir = opendir(commands_list_path)) == NULL)
@@ -523,7 +532,6 @@ static int init_scripts()
         strncpy(available_scripts[itr], entry->d_name, strlen(entry->d_name));
         itr++;
     }
-    closedir(dir);
 
     return EXIT_SUCCESS;
 }
@@ -547,7 +555,7 @@ static bool is_json_and_accessible(char *path)
 
 static char *open_json_and_return_allocated_string(const char *path)
 {
-    FILE *fd = fopen(path, "r");
+    FILE __attribute__((__cleanup__(cleanup_FD))) *fd = fopen(path, "r");
     if (!fd)
     {
         printf("File failed to open - %s", path);
@@ -577,7 +585,7 @@ static char *open_json_and_return_allocated_string(const char *path)
     {
         json_str[i] = fgetc(fd);
     }
-    fclose(fd);
+    // fclose(fd);
 
     return json_str;
 }
@@ -586,7 +594,7 @@ static bool is_credentials_json_valid(const char *json_path)
 {
     printf("checking %s\n", json_path);
 
-    char *json_str = open_json_and_return_allocated_string(json_path);
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
     int json_valid = 0;
     json_valid += is_key_in_json(json_str, "ver");
     json_valid += is_key_in_json(json_str, "pf");
@@ -596,8 +604,6 @@ static bool is_credentials_json_valid(const char *json_path)
     json_valid += is_key_in_json(json_str, "did");
     json_valid += is_key_in_json(json_str, "at");
     json_valid += is_key_in_json(json_str, "disc");
-
-    free(json_str);
 
     if (json_valid != 0)
     {
@@ -612,7 +618,7 @@ static bool parse_credentials_json(const char *json_path)
 {
     printf("parsing %s\n", json_path);
 
-    char *json_str = open_json_and_return_allocated_string(json_path);
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
     int json_valid = 0;
 
     json_valid += parse_raw_json_to_alloc_string(&ver, json_str, "ver");
@@ -624,7 +630,6 @@ static bool parse_credentials_json(const char *json_path)
     json_valid += parse_raw_json_to_int(&at, json_str, "at");
     json_valid += parse_raw_json_to_alloc_string(&disc, json_str, "disc");
 
-    free(json_str);
 
     if (json_valid != 0)
     {
@@ -639,7 +644,7 @@ static bool is_iotc_paths_json_valid(const char *json_path)
 {
     printf("checking %s\n", json_path);
 
-    char *json_str = open_json_and_return_allocated_string(json_path);
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
     int json_valid = 0;
     json_valid += is_key_in_json(json_str, "iotc_root_ca_path_az");
     json_valid += is_key_in_json(json_str, "iotc_root_ca_path_aws");
@@ -648,7 +653,6 @@ static bool is_iotc_paths_json_valid(const char *json_path)
     json_valid += is_key_in_json(json_str, "iotc_commands_path");
     json_valid += is_key_in_json(json_str, "iotc_telemetry_path");
 
-    free(json_str);
 
     if (json_valid != 0)
     {
@@ -663,14 +667,12 @@ static bool is_device_json_valid(const char *json_path)
 {
     printf("checking %s\n", json_path);
 
-    char *json_str = open_json_and_return_allocated_string(json_path);
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
     int json_valid = 0;
     json_valid += is_key_in_json(json_str, "authType");
     json_valid += is_key_in_json(json_str, "attributes");
     json_valid += is_key_in_json(json_str, "commands");
     json_valid += is_key_in_json(json_str, "properties");
-
-    free(json_str);
 
     if (json_valid != 0)
     {
