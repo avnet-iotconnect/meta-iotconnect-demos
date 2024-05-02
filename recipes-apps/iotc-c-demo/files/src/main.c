@@ -3,6 +3,14 @@
  * Authors: Nikola Markovic <nikola.markovic@avnet.com> et al.
  */
 
+
+/* TODO 
+    finish parse_device_json()
+    Store attributes in 2d array like the scripts
+
+    hook up jsons for connection
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -683,9 +691,82 @@ static bool is_device_json_valid(const char *json_path)
     return true;
 }
 
+static bool parse_iotc_paths_json(const char *json_path)
+{
+    printf("parsing %s\n", json_path);
+
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
+    int json_valid = 0;
+
+    json_valid += parse_raw_json_to_alloc_string(&iotc_root_ca_path_az, json_str, "iotc_root_ca_path_az");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_root_ca_path_aws, json_str, "iotc_root_ca_path_aws");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_x509_client_key_path, json_str, "iotc_x509_client_key_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_x509_client_cert_path, json_str, "iotc_x509_client_cert_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_commands_path, json_str, "iotc_commands_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_telemetry_path, json_str, "iotc_telemetry_path");
+
+    if (json_valid != 0)
+    {
+        printf("json is missing required attribute(s); Aborting\n");
+        return false;
+    }
+
+    char* arr[] = {iotc_root_ca_path_az, iotc_root_ca_path_aws, iotc_x509_client_key_path, iotc_x509_client_cert_path,iotc_commands_path,iotc_telemetry_path};
+    int arr_size = sizeof(arr) / sizeof(arr[0]);
+
+    for (int i = 0; i < arr_size; i++)
+    {
+        if (access(arr[i], F_OK) != 0)
+        {
+            printf("failed to access input json file - %s ; Aborting\n", arr[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool parse_device_json(const char *json_path)
+{
+    printf("parsing %s\n", json_path);
+
+    char __attribute__((__cleanup__(cleanup_string))) *json_str = open_json_and_return_allocated_string(json_path);
+    int json_valid = 0;
+
+    json_valid += parse_raw_json_to_int(&authType, json_str, "authType");
+    
+    // TODO FINISH THIS
+    
+    json_valid += parse_raw_json_to_alloc_string(&iotc_root_ca_path_aws, json_str, "iotc_root_ca_path_aws");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_x509_client_key_path, json_str, "iotc_x509_client_key_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_x509_client_cert_path, json_str, "iotc_x509_client_cert_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_commands_path, json_str, "iotc_commands_path");
+    json_valid += parse_raw_json_to_alloc_string(&iotc_telemetry_path, json_str, "iotc_telemetry_path");
+
+    if (json_valid != 0)
+    {
+        printf("json is missing required attribute(s); Aborting\n");
+        return false;
+    }
+
+    char* arr[] = {iotc_root_ca_path_az, iotc_root_ca_path_aws, iotc_x509_client_key_path, iotc_x509_client_cert_path,iotc_commands_path,iotc_telemetry_path};
+    int arr_size = sizeof(arr) / sizeof(arr[0]);
+
+    for (int i = 0; i < arr_size; i++)
+    {
+        if (access(arr[i], F_OK) != 0)
+        {
+            printf("failed to access input json file - %s ; Aborting\n", arr[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 int main(int argc, char *argv[])
 {
-
     IotConnectClientConfig config;
     iotconnect_sdk_init_config(&config);
 
@@ -724,13 +805,25 @@ int main(int argc, char *argv[])
 
     if (!is_device_json_valid(device_json_path))
     {
-        printf("credentials.json is missing required attribute(s); Aborting\n");
+        printf("device.json is missing required attribute(s); Aborting\n");
         return EXIT_FAILURE;
     }
 
     if (!parse_credentials_json(credentials_json_path))
     {
         printf("credentials.json failed to parse; Aborting\n");
+        return EXIT_FAILURE;
+    }
+
+    if (!parse_iotc_paths_json(iotc_paths_json_path))
+    {
+        printf("iotc_paths.json failed to parse; Aborting\n");
+        return EXIT_FAILURE;
+    }
+
+    if (!parse_device_json(device_json_path))
+    {
+        printf("device.json failed to parse; Aborting\n");
         return EXIT_FAILURE;
     }
 
