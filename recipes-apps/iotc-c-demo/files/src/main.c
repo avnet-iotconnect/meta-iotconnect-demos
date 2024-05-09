@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include "iotcl.h"
 #include "iotconnect.h"
@@ -46,6 +47,14 @@
         (x) = NULL; \
     }
 #define REPEAT_SENT_TELEMETRY
+
+static volatile sig_atomic_t keep_running = 1;
+
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+}
 
 char *json_path = NULL;
 char device_id[256] = {};
@@ -767,6 +776,8 @@ static bool parse_device_json(const char *json_path)
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, sig_handler);
+
     IotConnectClientConfig config;
     iotconnect_sdk_init_config(&config);
 
@@ -1054,7 +1065,7 @@ int main(int argc, char *argv[])
         return ret;
     }
 
-    while (iotconnect_sdk_is_connected())
+    while (iotconnect_sdk_is_connected() && keep_running)
     {
         publish_telemetry(number_of_attributes, telemetry);
         sleep(5);
