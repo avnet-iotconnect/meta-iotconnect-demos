@@ -8,12 +8,12 @@ DEPENDS += " iotc-c-demo-service"
 RDEPENDS_${PN} += " bash"
 PROVIDES = "${PN} ${PN}-dev"
 
-SRC_URI = "file://src/"
+SRC_URI = "gitsm://github.com/akarnil/iotconnect-c-demo.git;protocol=https;branch=main"
 
 SRCREV_FORMAT="machine_meta"
 SRCREV="${AUTOREV}"
 
-S="${WORKDIR}/src"
+S="${WORKDIR}/git"
 
 inherit cmake
 EXTRA_OECMAKE += "-DCMAKE_SKIP_RPATH=TRUE"
