@@ -9,6 +9,7 @@ from model.json_device import JsonDevice
 from signal import signal, SIGINT
 keep_running = True
 def sigint_handler(signal_received, frame):
+    global keep_running
     keep_running = False
 
 
