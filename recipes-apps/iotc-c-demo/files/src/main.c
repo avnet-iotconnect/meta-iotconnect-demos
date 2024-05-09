@@ -12,7 +12,7 @@
 
 // #include "app_config.h"
 #include "cJSON.h"
-
+#include <signal.h>
 
 #include <time.h>
 #include <sys/stat.h>
@@ -34,6 +34,14 @@
 #define STRINGS_ARE_EQUAL 0
 #define FREE(x) if ((x)) { free(x); (x) = NULL; }
 #define REPEAT_SENT_TELEMETRY
+
+static volatile sig_atomic_t keep_running = 1;
+
+static void sig_handler(int _)
+{
+    void(_);
+    keep_running = 0;
+}
 
 char* json_path = NULL;
 char device_id[256] = {};
@@ -384,6 +392,7 @@ static int init_scripts()
 
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT, sig_handler);
 
     IotConnectClientConfig config;
     iotconnect_sdk_init_config(&config);
@@ -607,7 +616,7 @@ int main(int argc, char *argv[]) {
         return ret;
     }
 
-    while (iotconnect_sdk_is_connected())
+    while (iotconnect_sdk_is_connected() && keep_running)
     {
         publish_telemetry(number_of_attributes, telemetry);
         sleep(5);
