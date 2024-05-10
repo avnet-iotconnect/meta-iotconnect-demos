@@ -8,7 +8,7 @@ DEPENDS += " iotc-c-demo-service"
 RDEPENDS_${PN} += " bash"
 PROVIDES = "${PN} ${PN}-dev"
 
-SRC_URI = "gitsm://github.com/akarnil/iotconnect-c-demo.git;protocol=https;branch=main"
+SRC_URI = "gitsm:/github.com/avnet-iotconnect/meta-iotconnect-c-demo-source.git;protocol=https;branch=main"
 
 SRCREV_FORMAT="machine_meta"
 SRCREV="${AUTOREV}"
