@@ -4,7 +4,7 @@ led_path="/tmp/fake-led"
 
 # Check if the user provided an argument
 if [ $# -ne 1 ]; then
-    >&2 echo "Usage: $0 <0 or 1>"
+    echo "Usage: $0 <0 or 1>"
     exit 1
 fi
 
@@ -14,7 +14,7 @@ value="$1"
 
 # Check if the provided value is either 0 or 1
 if [ "$value" -ne 0 ] && [ "$value" -ne 1 ]; then
-    >&2 echo "Error: Input must be either 0 or 1."
+    echo "Error: Input must be either 0 or 1."
     exit 1
 fi
 
@@ -25,6 +25,6 @@ echo "$value" > "$led_path"
 if [ $? -eq 0 ]; then
     echo "Value '$value' written to '$led_path' successfully."
 else
-    >&2 echo "Error writing to '$led_path'."
+    echo "Error writing to '$led_path'."
     exit 1
 fi
