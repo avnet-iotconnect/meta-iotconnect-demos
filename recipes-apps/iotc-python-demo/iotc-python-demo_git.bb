@@ -7,6 +7,8 @@ RDEPENDS_${PN} = "python3-iotconnect-sdk bash"
 SRC_URI = "gitsm://github.com/avnet-iotconnect/meta-iotconnect-python-demo-source.git;protocol=https;branch=main"
 SRCREV="${AUTOREV}"
 
+S="${WORKDIR}/git"
+
 APP_INSTALL_DIR = "${base_prefix}/usr/iotc/bin/iotc-python-sdk"
 # PRIVATE_DATA_DIR = "${base_prefix}/usr/iotc-python/local"
 
@@ -20,7 +22,7 @@ FILES_${PN} += "${APP_INSTALL_DIR}/*"
 
 do_install() {
     install -d ${D}${APP_INSTALL_DIR}
-    for f in ${WORKDIR}/model/*
+    for f in model/*
     do
         if [ -f $f ]; then
             if [ ! -d ${D}${APP_INSTALL_DIR}/model ]; then
@@ -42,10 +44,10 @@ do_install() {
     # done
 
     # Install main app
-    install -m 0755 ${WORKDIR}/iotc-python-demo.py ${D}${APP_INSTALL_DIR}/
+    install -m 0755 iotc-python-demo.py ${D}${APP_INSTALL_DIR}/
 
     install -d ${D}/${ROOT_HOME}/
-    install -m 0755 ${WORKDIR}/iotc-application.sh ${D}${ROOT_HOME}
+    install -m 0755 iotc-application.sh ${D}${ROOT_HOME}
 
     # if [ ! -d ${D}${PRIVATE_DATA_DIR} ]; then
     #     install -d ${D}${PRIVATE_DATA_DIR}
