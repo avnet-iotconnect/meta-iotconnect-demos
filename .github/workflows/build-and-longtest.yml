@@ -1,0 +1,192 @@
+name: build-and-run-short-test
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Build a test image and run the tests on the board"
+        required: false
+        default: "true"
+      test-flash:
+        description: "Run only flash for test purposes only"
+        required: false
+        default: "false"
+      yocto-image:
+        description: "The yocto image to build"
+        required: false
+        default: "core-image-base"
+jobs:
+
+#  start-self-hosted-runner:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout simplecore-tools
+#        uses: actions/checkout@v4.1.1
+#        with:
+#          ssh-key: ${{ secrets.PRIVATE_KEY }}
+#      - name: Start VM
+#        timeout-minutes: 1440
+#        id: start-vm
+#        shell: bash
+#        run: |
+#          # Login Azure command line
+#          az login --service-principal --username ${{ secrets.AZURE_USER_ID }} --tenant ${{ secrets.AZURE_TENANT_ID }} --password ${{ secrets.AZURE_USER_TOKEN }}
+#          export AZ_BEARER=$(az account get-access-token --query accessToken -o tsv --subscription ${{ secrets.AZURE_VM_SUBSCRIPTION_ID }})
+#          $GITHUB_WORKSPACE/scotty/scripts/start-vm \
+#            "${{ secrets.AZURE_VM_SUBSCRIPTION_ID }}" \
+#            "${{ secrets.AZURE_VM_RESSOURCE_GROUP_NAME }}" \
+
+  build-yocto:
+    if: ${{ github.event.inputs.test-flash == 'false' }}
+    runs-on: [self-hosted, build]
+    outputs:
+      file-url: ${{ steps.s3-upload.outputs.file-url }}
+    steps:
+      - name: Checkout simplecore-tools
+        uses: actions/checkout@v4.1.1
+        with:
+          path: 'yocto-layers-demo'
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GHCR_PAT}}
+      - name: "Run yocto build"
+        run: |
+          git clone git@github.com:avnet-iotconnect/meta-iotconnect.git yocto-layers
+          export DNS=$(netplan status | grep "DNS Addre"| grep -v "stub" | sed -rn 's/    DNS Addresses: *(.*)/\1/p')
+          ssh-keyscan -p 9418 -t rsa msc-git02.msc-ge.com >> ~/.ssh/known_hosts
+          git clone ssh://gitolite@msc-git02.msc-ge.com:9418/msc_ol99/msc-ldk
+          chmod +x yocto-layers/.github/ci-scripts/build-yocto.sh
+          docker pull ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest
+          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-yocto.sh"
+          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/core-image-base-sm2s-imx8mp.wic .
+          gzip -v core-image-base-sm2s-imx8mp.wic
+
+      - uses: hkusu/s3-upload-action@v2.1.0
+        id: s3-upload
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+          aws-bucket: ${{ secrets.AWS_BUCKET }}
+          file-path: core-image-base-sm2s-imx8mp.wic.gz
+          destination-dir: '/'
+          bucket-root: 'sdk-images'
+          public: true
+          output-file-url: 'true'
+          
+
+  test-image:
+    runs-on: [self-hosted, test]
+    timeout-minutes: 720
+    if: ${{ github.event.inputs.test == 'true' }}
+    needs:
+      [
+        build-yocto
+      ]
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+#      - name: "Download new firmware for the board"
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: core-image-base-sm2s-imx8mp-kirkstone.wic
+#          path: flash/core-image-base-sm2s-imx8mp.wic
+      - name: "Download image from S3 bucket"
+        run: | 
+          curl ${{ needs.build-yocto.outputs.file-url }} --output core-image-base-sm2s-imx8mp.wic.gz
+      - name: "TFTP setup and config"
+        run: |
+          git clone git@bitbucket.org:adeneo-embedded/h0037-iotconnect-sdk-improvements-pluma.git
+          cd h0037-iotconnect-sdk-improvements-pluma
+          git checkout ci-test
+          sed -i 's/ttyS0/ttyUSB0/g' conf/pluma_conf_ci.yml
+          sed -i 's/ttyS0/ttyUSB0/g' conf/pluma_conf_qa.yml
+          sed -i 's/ttyS0/ttyUSB0/g' boards/sm2s-imx8mp/target.yml
+          sed -i 's/ttyS0/ttyUSB0/g' boards/sm2s-imx8mp/target.yml
+          sed -i 's/target: 10\.91\.1\.133/target: 10.103.1.106/g' boards/sm2s-imx8mp/target.yml
+          sed -i 's/TOPDIR\=\/home\/pluma\/Projects/TOPDIR=\/opt\/actions-runner-meta\/_work\/meta-iotconnect\/meta-iotconnect//g' tftp-flash-device.sh
+          sed -i 's/BOARDDIR_YOCTO\=\$TOPDIR\/Iot-Connect\/msc-ldk\/build\/01047/BOARDDIR_YOCTO=\$TOPDIR\/flash\/core-image-base-sm2s-imx8mp.wic/g' tftp-flash-device.sh
+          sed -i 's/DEPLOYDIR\=\$BOARDDIR\_YOCTO\/tmp\/deploy\/images\/\$MACHINE/DEPLOYDIR\=\$BOARDDIR\_YOCTO/g' tftp-flash-device.sh
+          sed -i 's/SDIMG=msc-image-base-sdk-$MACHINE.wic.gz/SDIMG=core-image-base-sm2s-imx8mp.wic.gz/g' tftp-flash-device.sh
+          sed -i 's/TFTP_DEVICEIP=10.91.1.138/TFTP_DEVICEIP=10.103.1.106/g' tftp-flash-device.sh
+          sed -i 's/TFTP_SERVERIP=10.91.1.153/TFTP_SERVERIP=10.103.1.122/g' tftp-flash-device.sh
+          sed -i 's/SSH\_TARGET\=root\@10.91.1.138/SSH\_TARGET\=root\@10.103.1.106/g' tftp-flash-device.sh
+          sed -i 's/timeout: 120/timeout: 600/g' tftp-install.yml
+          sed -i 's/should_fail: true/\#should_fail: true/g' tftp-install.yml
+          sed -i 's/tftpdstdp: 6969/tftpdstp: 69/g' tftp-install.yml
+      - name: "TFTP Flashing"
+        continue-on-error: true
+        run: |
+          cd h0037-iotconnect-sdk-improvements-pluma/
+          ./tftp-flash-device.sh       
+      - name: "Run the Pluma test suite on the board"
+        continue-on-error: true
+        run: |
+          cd h0037-iotconnect-sdk-improvements-pluma/
+          sed -i 's/host_interface: enp0s31f6/host_interface: eth0/g' yml/plans/lats.yml
+          sed -i 's/device_interface: eth2/device_interface: eth1/g' yml/plans/lats.yml
+          mkdir yml/plans/scripts
+          echo "root" >> pico.txt
+          echo "" >> pico.txt
+          cat pico.txt | picocom -qrx 1000 -b 115200 /dev/ttyUSB0
+          pluma -t conf/pluma_conf_ci.yml -c yml/plans/lats.yml --verbose --plugin yml/plans/scripts/
+      - name: 'Upload artifacts logs'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pluma-results.log
+          path: pluma-results/pluma-*.log
+          retention-days: 2
+
+  clean:
+    runs-on: [self-hosted, build]
+    if: always()
+    needs:
+      [
+        build-yocto
+      ]
+    steps:
+      - name: "clean build dir"
+        run: |
+          rm -rf docker-msc-ldk/
+          rm -rf src/
+          rm -rf yocto-layers/
+          cd ../
+          rm -rf meta-iotconnect/
+
+  clean-rpi:
+    runs-on: [self-hosted, test]
+    if: always()
+    needs:
+      [
+        test-image
+      ]
+    steps:
+      - name: "clean build dir"
+        run: |
+          rm -rf h0037-iotconnect-sdk-improvements-pluma/
+          rm -rf flash/*
+
+ # stop-self-hosted-runner:
+ #   runs-on: ubuntu-latest
+ #   needs:
+ #     [
+ #       start-self-hosted-runner,
+ #     ]
+ #   if: always()
+ #   env:
+ #   steps:
+ #     - name: Checkout simplecore-tools
+ #       uses: actions/checkout@v4.1.1
+ #       with:
+ #         ssh-key: ${{ secrets.PRIVATE_KEY }}
+ #     - name: Stop VM composite
+ #       uses: ./.github/ci-scripts/stop-self-hosted-runner
