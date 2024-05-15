@@ -7,7 +7,7 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-ExecStart=/usr/iotc/bin/iotc-c-sdk/iotc-c-demo /usr/iotc/conf/config.json
+ExecStart=/usr/iotc/bin/iotc-c-sdk/iotc-c-demo /usr/iotc/local/config.json
 Restart=always
 RestartSec=30
 StandardOutput=journal
