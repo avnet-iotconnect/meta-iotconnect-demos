@@ -4,18 +4,11 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      test:
-        description: "Build a test image and run the tests on the board"
-        required: false
-        default: "true"
-      test-flash:
-        description: "Run only flash for test purposes only"
-        required: false
-        default: "false"
       yocto-image:
         description: "The yocto image to build"
         required: false
         default: "core-image-base"
+
 jobs:
 
 #  start-self-hosted-runner:
@@ -38,7 +31,6 @@ jobs:
 #            "${{ secrets.AZURE_VM_RESSOURCE_GROUP_NAME }}" \
 
   build-yocto:
-    if: ${{ github.event.inputs.test-flash == 'false' }}
     runs-on: [self-hosted, build]
     outputs:
       file-url: ${{ steps.s3-upload.outputs.file-url }}
@@ -59,15 +51,15 @@ jobs:
           password: ${{secrets.GHCR_PAT}}
       - name: "Run yocto build"
         run: |
-          git clone git@github.com:avnet-iotconnect/meta-iotconnect.git yocto-layers
           export DNS=$(netplan status | grep "DNS Addre"| grep -v "stub" | sed -rn 's/    DNS Addresses: *(.*)/\1/p')
           ssh-keyscan -p 9418 -t rsa msc-git02.msc-ge.com >> ~/.ssh/known_hosts
           git clone ssh://gitolite@msc-git02.msc-ge.com:9418/msc_ol99/msc-ldk
-          chmod +x yocto-layers/.github/ci-scripts/build-demos.sh
+          chmod +x yocto-layers-demo/.github/ci-scripts/build-test-demos.sh
+          sed -i 's/core-image-base/${{ github.event.inputs.yocto-image }}/g' yocto-layers-demo/.github/ci-scripts/build-test-demos.sh
           docker pull ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest
-          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-demos.sh"
-          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/core-image-base-sm2s-imx8mp.wic .
-          gzip -v core-image-base-sm2s-imx8mp.wic
+          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers-demo/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-test-demos.sh"
+          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic .
+          gzip -v ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic
 
       - uses: hkusu/s3-upload-action@v2.1.0
         id: s3-upload
@@ -75,10 +67,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
-          aws-bucket: ${{ secrets.AWS_BUCKET }}
-          file-path: core-image-base-sm2s-imx8mp.wic.gz
+          aws-bucket: 'iotconnect-sdk-images'
+          file-path: ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic.gz
           destination-dir: '/'
-          bucket-root: 'sdk-images'
+          bucket-root: 'test-images'
           public: true
           output-file-url: 'true'
           
@@ -86,7 +78,6 @@ jobs:
   test-image:
     runs-on: [self-hosted, test]
     timeout-minutes: 720
-    if: ${{ github.event.inputs.test == 'true' }}
     needs:
       [
         build-yocto
@@ -97,24 +88,29 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: "Download image from S3 bucket"
         run: | 
-          curl ${{ needs.build-yocto.outputs.file-url }} --output core-image-base-sm2s-imx8mp.wic.gz
+          curl ${{ needs.build-yocto.outputs.file-url }} --output ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic.gz
       - name: "TFTP setup and config"
         run: |
           git clone git@bitbucket.org:adeneo-embedded/h0037-iotconnect-sdk-improvements-pluma.git
           cd h0037-iotconnect-sdk-improvements-pluma
           git checkout ci-test
+          sleep 40
+          echo "root" >> pico.txt
+          echo "ip a" >> pico.txt
+          echo "" >> pico.txt
+          IP=$(cat pico.txt | picocom -qrx 1000 -b 115200 /dev/ttyUSB0 | grep 'inet ' | cut -d: -f2 | awk '{ print $2 }' | cut -d/ -f1 | grep -v '127.0.0.1')
           sed -i 's/ttyS0/ttyUSB0/g' conf/pluma_conf_ci.yml
           sed -i 's/ttyS0/ttyUSB0/g' conf/pluma_conf_qa.yml
           sed -i 's/ttyS0/ttyUSB0/g' boards/sm2s-imx8mp/target.yml
           sed -i 's/ttyS0/ttyUSB0/g' boards/sm2s-imx8mp/target.yml
-          sed -i 's/target: 10\.91\.1\.133/target: 10.103.1.106/g' boards/sm2s-imx8mp/target.yml
-          sed -i 's/TOPDIR\=\/home\/pluma\/Projects/TOPDIR=\/opt\/actions-runner-meta\/_work\/meta-iotconnect\/meta-iotconnect//g' tftp-flash-device.sh
-          sed -i 's/BOARDDIR_YOCTO\=\$TOPDIR\/Iot-Connect\/msc-ldk\/build\/01047/BOARDDIR_YOCTO=\$TOPDIR\/flash\/core-image-base-sm2s-imx8mp.wic/g' tftp-flash-device.sh
+          sed -i "s/target: 10\.91\.1\.133/target: $IP/g" boards/sm2s-imx8mp/target.yml
+          sed -i 's/TOPDIR\=\/home\/pluma\/Projects/TOPDIR=\/opt\/actions-runner-meta\/_work\/meta-iotconnect-demos\/meta-iotconnect-demos/g' tftp-flash-device.sh
+          sed -i 's/BOARDDIR_YOCTO\=\$TOPDIR\/Iot-Connect\/msc-ldk\/build\/01047/BOARDDIR_YOCTO=\$TOPDIR\/flash\/${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic/g' tftp-flash-device.sh
           sed -i 's/DEPLOYDIR\=\$BOARDDIR\_YOCTO\/tmp\/deploy\/images\/\$MACHINE/DEPLOYDIR\=\$BOARDDIR\_YOCTO/g' tftp-flash-device.sh
-          sed -i 's/SDIMG=msc-image-base-sdk-$MACHINE.wic.gz/SDIMG=core-image-base-sm2s-imx8mp.wic.gz/g' tftp-flash-device.sh
-          sed -i 's/TFTP_DEVICEIP=10.91.1.138/TFTP_DEVICEIP=10.103.1.106/g' tftp-flash-device.sh
+          sed -i 's/SDIMG=msc-image-base-sdk-$MACHINE.wic.gz/SDIMG=${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic.gz/g' tftp-flash-device.sh
+          sed -i "s/TFTP_DEVICEIP=10.91.1.138/TFTP_DEVICEIP=$IP/g" tftp-flash-device.sh
           sed -i 's/TFTP_SERVERIP=10.91.1.153/TFTP_SERVERIP=10.103.1.122/g' tftp-flash-device.sh
-          sed -i 's/SSH\_TARGET\=root\@10.91.1.138/SSH\_TARGET\=root\@10.103.1.106/g' tftp-flash-device.sh
+          sed -i "s/SSH_TARGET=root@10.91.1.138/SSH_TARGET=root@$IP/g" tftp-flash-device.sh
           sed -i 's/timeout: 120/timeout: 600/g' tftp-install.yml
           sed -i 's/should_fail: true/\#should_fail: true/g' tftp-install.yml
           sed -i 's/tftpdstdp: 6969/tftpdstp: 69/g' tftp-install.yml
@@ -129,10 +125,9 @@ jobs:
           cd h0037-iotconnect-sdk-improvements-pluma/
           sed -i 's/host_interface: enp0s31f6/host_interface: eth0/g' yml/plans/lats.yml
           sed -i 's/device_interface: eth2/device_interface: eth1/g' yml/plans/lats.yml
-          mkdir yml/plans/scripts
-          echo "root" >> pico.txt
-          echo "" >> pico.txt
+          sed -i 's/password: mscldk/password:/g' conf/pluma_conf_ci.yml
           cat pico.txt | picocom -qrx 1000 -b 115200 /dev/ttyUSB0
+          mkdir yml/plans/scripts
           pluma -t conf/pluma_conf_ci.yml -c yml/plans/lats.yml --verbose --plugin yml/plans/scripts/
       - name: 'Upload artifacts logs'
         uses: actions/upload-artifact@v4
@@ -154,8 +149,9 @@ jobs:
           rm -rf docker-msc-ldk/
           rm -rf src/
           rm -rf yocto-layers/
+          rm -rf yocto-layers-demo/
           cd ../
-          rm -rf meta-iotconnect/
+          rm -rf meta-iotconnect-demos/
 
   clean-rpi:
     runs-on: [self-hosted, test]

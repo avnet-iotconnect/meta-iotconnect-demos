@@ -1,4 +1,4 @@
-name: build-and-run-short-test
+name: build-images
 
 on:
   pull_request:
@@ -54,9 +54,10 @@ jobs:
           export DNS=$(netplan status | grep "DNS Addre"| grep -v "stub" | sed -rn 's/    DNS Addresses: *(.*)/\1/p')
           ssh-keyscan -p 9418 -t rsa msc-git02.msc-ge.com >> ~/.ssh/known_hosts
           git clone ssh://gitolite@msc-git02.msc-ge.com:9418/msc_ol99/msc-ldk
-          chmod +x yocto-layers/.github/ci-scripts/build-demos.sh
+          chmod +x yocto-layers-demo/.github/ci-scripts/build-demos.sh
+          sed -i 's/core-image-base/${{ github.event.inputs.yocto-image }}/g' yocto-layers-demo/.github/ci-scripts/build-demos.sh
           docker pull ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest
-          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-demos.sh"
+          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers-demo/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-demos.sh"
           cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/core-image-base-sm2s-imx8mp.wic .
           gzip -v core-image-base-sm2s-imx8mp.wic
 
@@ -66,10 +67,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
-          aws-bucket: ${{ secrets.AWS_BUCKET }}
+          aws-bucket: 'iotconnect-sdk-images'
           file-path: core-image-base-sm2s-imx8mp.wic.gz
-          destination-dir: '/demos-image/'
-          bucket-root: 'sdk-images'
+          destination-dir: '/'
+          bucket-root: 'demos-images'
           public: true
           output-file-url: 'true'
           
@@ -78,16 +79,18 @@ jobs:
     if: always()
     needs:
       [
-        build-yocto
+        build-sm2s-imx8mp
       ]
     steps:
       - name: "clean build dir"
         run: |
           rm -rf docker-msc-ldk/
+          rm -rf msc-ldk/
           rm -rf src/
           rm -rf yocto-layers/
+          rm -rf yocto-layers-demo/
           cd ../
-          rm -rf meta-iotconnect/
+          rm -rf meta-iotconnect-demos/
 
 
  # stop-self-hosted-runner:
