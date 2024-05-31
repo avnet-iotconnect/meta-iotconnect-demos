@@ -1,4 +1,4 @@
-name: build-maaxboard-sdk-images
+name: build-maaxboard-demo-image
 
 on:
   workflow_dispatch:
@@ -35,8 +35,8 @@ jobs:
           bitbake-layers add-layer ../../sources/meta-iotconnect
           bitbake-layers add-layer ../../sources/meta-iotconnect-demos
           bitbake ${{ github.event.inputs.yocto-image }}
-          cd /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/ 
-          gzip -v ${{ github.event.inputs.yocto-image }}-maaxboard.wic
+          cp /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard.wic ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
+          gzip -v ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
         shell: bash {0}
       - uses: hkusu/s3-upload-action@v2.1.0
         id: s3-upload
@@ -45,8 +45,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
-          file-path: /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard.wic.gz
-          destination-dir: '/'
-          bucket-root: 'demos-images'
+          file-path: /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic.gz
+          destination-dir: '${{ github.head_ref || github.ref_name }}/maaxboard/'
+          bucket-root: "MPU/"
           public: true
           output-file-url: 'true'

@@ -1,4 +1,4 @@
-name: build-images
+name: build-msc-demo-image
 
 on:
   pull_request:
@@ -58,8 +58,8 @@ jobs:
           sed -i 's/core-image-base/${{ github.event.inputs.yocto-image }}/g' yocto-layers-demo/.github/ci-scripts/build-demos.sh
           docker pull ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest
           docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers-demo/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-demos.sh"
-          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/core-image-base-sm2s-imx8mp.wic .
-          gzip -v core-image-base-sm2s-imx8mp.wic
+          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic
+          gzip -v ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic
 
       - uses: hkusu/s3-upload-action@v2.1.0
         id: s3-upload
@@ -68,9 +68,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
-          file-path: core-image-base-sm2s-imx8mp.wic.gz
-          destination-dir: '/'
-          bucket-root: 'demos-images'
+          file-path: ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic.gz
+          destination-dir: '${{ github.head_ref || github.ref_name }}/msc/'
+          bucket-root: '/MPU/'
           public: true
           output-file-url: 'true'
           
