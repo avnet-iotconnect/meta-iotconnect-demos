@@ -1,4 +1,4 @@
-name: build-stm32mp1-sdk-images
+name: build-stm32mp1-demo-image
 
 on:
   workflow_dispatch:
@@ -37,8 +37,8 @@ jobs:
           bitbake-layers add-layer ../layers/meta-iotconnect-demos
           bitbake ${{ github.event.inputs.yocto-image }}
           cd /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/
-          zip st-image-weston-kirkstone-stm32mp157.zip arm-trusted-firmware/tf-a-stm32mp157c-dk2-usb.stm32 fip/fip-stm32mp157c-dk2-trusted.bin arm-trusted-firmware/tf-a-stm32mp157c-dk2-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp157c-dk2-trusted.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/trusted/FlashLayout_sdcard_stm32mp157c-dk2-trusted.tsv
-          zip st-image-weston-kirkstone-stm32mp135.zip arm-trusted-firmware/tf-a-stm32mp135f-dk-usb.stm32 fip/fip-stm32mp135f-dk-optee.bin arm-trusted-firmware/tf-a-stm32mp135f-dk-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp135f-dk-optee.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/optee/FlashLayout_sdcard_stm32mp135f-dk-optee.tsv
+          zip st-image-weston-kirkstone-stm32mp157-demo.zip arm-trusted-firmware/tf-a-stm32mp157c-dk2-usb.stm32 fip/fip-stm32mp157c-dk2-trusted.bin arm-trusted-firmware/tf-a-stm32mp157c-dk2-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp157c-dk2-trusted.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/trusted/FlashLayout_sdcard_stm32mp157c-dk2-trusted.tsv
+          zip st-image-weston-kirkstone-stm32mp135-demo.zip arm-trusted-firmware/tf-a-stm32mp135f-dk-usb.stm32 fip/fip-stm32mp135f-dk-optee.bin arm-trusted-firmware/tf-a-stm32mp135f-dk-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp135f-dk-optee.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/optee/FlashLayout_sdcard_stm32mp135f-dk-optee.tsv
         shell: bash {0}
       - uses: hkusu/s3-upload-action@v2.1.0
         id: s3-upload-mp157
@@ -47,9 +47,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
-          file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp157.zip
-          destination-dir: '/'
-          bucket-root: 'demos-images'
+          file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp157-demo.zip
+          destination-dir: '${{ github.head_ref || github.ref_name }}/mpu157dk/'
+          bucket-root: 'MPU'
           public: true
           output-file-url: 'true'
       - uses: hkusu/s3-upload-action@v2.1.0
@@ -59,8 +59,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
-          file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp135.zip
-          destination-dir: '/'
-          bucket-root: 'demos-images'
+          file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp135-demo.zip
+          destination-dir: '${{ github.head_ref || github.ref_name }}/mpu135dk/'
+          bucket-root: 'MPU'
           public: true
           output-file-url: 'true'
