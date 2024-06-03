@@ -34,7 +34,7 @@ jobs:
           GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone https://github.com/avnet-iotconnect/meta-iotconnect-demos.git -b kirkstone ../../sources/meta-iotconnect-demos
           bitbake-layers add-layer ../../sources/meta-iotconnect
           bitbake-layers add-layer ../../sources/meta-iotconnect-demos
-          bitbake ${{ github.event.inputs.yocto-image }}
+          GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" bitbake ${{ github.event.inputs.yocto-image }}
           cp /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard.wic ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
           gzip -v ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
         shell: bash {0}
