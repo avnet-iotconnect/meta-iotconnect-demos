@@ -35,6 +35,7 @@ jobs:
           bitbake-layers add-layer ../../sources/meta-iotconnect
           bitbake-layers add-layer ../../sources/meta-iotconnect-demos
           GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" bitbake ${{ github.event.inputs.yocto-image }}
+          cd /home/pokyuser/
           cp /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard.wic ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
           gzip -v ${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic
         shell: bash {0}
@@ -45,7 +46,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
-          file-path: /home/pokyuser/MaaXBoard_IoTC_kirkstone/maaxboard/build/tmp/deploy/images/maaxboard/${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic.gz
+          file-path: /home/pokyuser/${{ github.event.inputs.yocto-image }}-maaxboard-demo.wic.gz
           destination-dir: '${{ github.head_ref || github.ref_name }}/maaxboard/'
           bucket-root: "MPU/"
           public: true

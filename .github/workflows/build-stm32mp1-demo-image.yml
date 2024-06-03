@@ -48,7 +48,7 @@ jobs:
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
           file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp157-demo.zip
-          destination-dir: '${{ github.head_ref || github.ref_name }}/mpu157dk/'
+          destination-dir: '${{ github.head_ref || github.ref_name }}/st/mpu157dk/'
           bucket-root: 'MPU'
           public: true
           output-file-url: 'true'
@@ -60,7 +60,7 @@ jobs:
           aws-region: 'us-east-1'
           aws-bucket: 'iotconnect-sdk-images'
           file-path: /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-kirkstone-stm32mp135-demo.zip
-          destination-dir: '${{ github.head_ref || github.ref_name }}/mpu135dk/'
+          destination-dir: '${{ github.head_ref || github.ref_name }}/st/mpu135dk/'
           bucket-root: 'MPU'
           public: true
           output-file-url: 'true'
