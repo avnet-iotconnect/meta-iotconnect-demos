@@ -35,7 +35,7 @@ jobs:
           GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone https://github.com/avnet-iotconnect/meta-iotconnect-demos.git -b kirkstone ../layers/meta-iotconnect-demos
           bitbake-layers add-layer ../layers/meta-iotconnect
           bitbake-layers add-layer ../layers/meta-iotconnect-demos
-          bitbake ${{ github.event.inputs.yocto-image }}
+          GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" bitbake ${{ github.event.inputs.yocto-image }}
           cd /home/pokyuser/STM32MP157_IoTC_kirkstone/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/
           zip st-image-weston-kirkstone-stm32mp157-demo.zip arm-trusted-firmware/tf-a-stm32mp157c-dk2-usb.stm32 fip/fip-stm32mp157c-dk2-trusted.bin arm-trusted-firmware/tf-a-stm32mp157c-dk2-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp157c-dk2-trusted.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/trusted/FlashLayout_sdcard_stm32mp157c-dk2-trusted.tsv
           zip st-image-weston-kirkstone-stm32mp135-demo.zip arm-trusted-firmware/tf-a-stm32mp135f-dk-usb.stm32 fip/fip-stm32mp135f-dk-optee.bin arm-trusted-firmware/tf-a-stm32mp135f-dk-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp135f-dk-optee.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/optee/FlashLayout_sdcard_stm32mp135f-dk-optee.tsv
