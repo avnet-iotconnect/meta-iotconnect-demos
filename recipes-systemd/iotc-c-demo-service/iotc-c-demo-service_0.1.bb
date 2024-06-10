@@ -4,7 +4,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 inherit systemd
 
 SYSTEMD_AUTO_ENABLE = "disable"
-SYSTEMD_SERVICE:${PN} = "iotc-c-demo.service"
+SYSTEMD_SERVICE_${PN} = "iotc-c-demo.service"
 
 SRC_URI = "file://iotc-c-demo.service"
 
