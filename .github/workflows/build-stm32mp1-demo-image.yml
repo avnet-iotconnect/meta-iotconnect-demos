@@ -1,0 +1,67 @@
+name: build-stm32mp1-demo-image
+
+on:
+  workflow_dispatch:
+    inputs:
+      yocto-image:
+        description: "The yocto image to build"
+        required: false
+        default: "st-image-weston"
+jobs:
+  build-yocto:
+    runs-on: [self-hosted, build]
+    container:
+      image: ghcr.io/avnet-iotconnect/meta-iotconnect/build-iotc-sdk:latest
+      options: --user pokyuser
+      credentials:
+        username: ${{github.actor}}
+        password: ${{secrets.GHCR_PAT}}
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: "Run yocto build"
+        run: |
+          cd /home/pokyuser
+          cd STM32MP1_IoTC/
+          git config --global user.email "ci-avnet@example.com"
+          git config --global user.name "CI Avnet"
+          repo init -u https://github.com/STMicroelectronics/oe-manifest.git -b refs/tags/openstlinux-6.1-yocto-mickledore-mp1-v24.03.13 && repo sync
+          set +e
+          MACHINE=stm32mp1 DISTRO=openstlinux-weston EULA_stm32mp1=1 source layers/meta-st/scripts/envsetup.sh
+          cd ../
+          source layers/openembedded-core/oe-init-build-env build-openstlinuxweston-stm32mp1 
+          ls -lrth /    
+          GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone https://github.com/avnet-iotconnect/meta-iotconnect.git -b ${{ github.head_ref || github.ref_name }} ../layers/meta-iotconnect
+          GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone https://github.com/avnet-iotconnect/meta-iotconnect-demos.git -b ${{ github.head_ref || github.ref_name }} ../layers/meta-iotconnect-demos
+          bitbake-layers add-layer ../layers/meta-iotconnect
+          bitbake-layers add-layer ../layers/meta-iotconnect-demos
+          GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" bitbake ${{ github.event.inputs.yocto-image }}
+          cd /home/pokyuser/STM32MP1_IoTC/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/
+          zip st-image-weston-stm32mp157-demo.zip arm-trusted-firmware/tf-a-stm32mp157c-dk2-usb.stm32 fip/fip-stm32mp157c-dk2-trusted.bin arm-trusted-firmware/tf-a-stm32mp157c-dk2-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp157c-dk2-trusted.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/trusted/FlashLayout_sdcard_stm32mp157c-dk2-trusted.tsv
+          zip st-image-weston-stm32mp135-demo.zip arm-trusted-firmware/tf-a-stm32mp135f-dk-usb.stm32 fip/fip-stm32mp135f-dk-optee.bin arm-trusted-firmware/tf-a-stm32mp135f-dk-sdcard.stm32 arm-trusted-firmware/metadata.bin fip/fip-stm32mp135f-dk-optee.bin st-image-bootfs-openstlinux-weston-stm32mp1.ext4 st-image-vendorfs-openstlinux-weston-stm32mp1.ext4 st-image-weston-openstlinux-weston-stm32mp1.ext4 st-image-userfs-openstlinux-weston-stm32mp1.ext4 flashlayout_st-image-weston/optee/FlashLayout_sdcard_stm32mp135f-dk-optee.tsv
+        shell: bash {0}
+      - uses: hkusu/s3-upload-action@v2.1.0
+        id: s3-upload-mp157
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+          aws-bucket: 'iotconnect-sdk-images'
+          file-path: /home/pokyuser/STM32MP1_IoTC/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-stm32mp157-demo.zip
+          destination-dir: '${{ github.head_ref || github.ref_name }}/st/mpu157dk/'
+          bucket-root: 'MPU'
+          public: true
+          output-file-url: 'true'
+      - uses: hkusu/s3-upload-action@v2.1.0
+        id: s3-upload-mp135
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+          aws-bucket: 'iotconnect-sdk-images'
+          file-path: /home/pokyuser/STM32MP1_IoTC/build-openstlinuxweston-stm32mp1/tmp-glibc/deploy/images/stm32mp1/st-image-weston-stm32mp135-demo.zip
+          destination-dir: '${{ github.head_ref || github.ref_name }}/st/mpu135dk/'
+          bucket-root: 'MPU'
+          public: true
+          output-file-url: 'true'

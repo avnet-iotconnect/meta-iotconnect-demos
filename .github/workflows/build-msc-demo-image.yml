@@ -1,0 +1,109 @@
+name: build-msc-demo-image
+
+on:
+  workflow_dispatch:
+    inputs:
+      yocto-image:
+        description: "The yocto image to build"
+        required: false
+        default: "core-image-base"
+jobs:
+
+#  start-self-hosted-runner:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout simplecore-tools
+#        uses: actions/checkout@v4.1.1
+#        with:
+#          ssh-key: ${{ secrets.PRIVATE_KEY }}
+#      - name: Start VM
+#        timeout-minutes: 1440
+#        id: start-vm
+#        shell: bash
+#        run: |
+#          # Login Azure command line
+#          az login --service-principal --username ${{ secrets.AZURE_USER_ID }} --tenant ${{ secrets.AZURE_TENANT_ID }} --password ${{ secrets.AZURE_USER_TOKEN }}
+#          export AZ_BEARER=$(az account get-access-token --query accessToken -o tsv --subscription ${{ secrets.AZURE_VM_SUBSCRIPTION_ID }})
+#          $GITHUB_WORKSPACE/scotty/scripts/start-vm \
+#            "${{ secrets.AZURE_VM_SUBSCRIPTION_ID }}" \
+#            "${{ secrets.AZURE_VM_RESSOURCE_GROUP_NAME }}" \
+
+  build-sm2s-imx8mp:
+    runs-on: [self-hosted, build]
+    outputs:
+      file-url: ${{ steps.s3-upload.outputs.file-url }}
+    steps:
+      - name: Checkout simplecore-tools
+        uses: actions/checkout@v4.1.1
+        with:
+          path: 'yocto-layers-demo'
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GHCR_PAT}}
+      - name: "Run yocto build"
+        run: |
+          git clone git@github.com:avnet-iotconnect/meta-iotconnect.git yocto-layers
+          export DNS=$(netplan status | grep "DNS Addre"| grep -v "stub" | sed -rn 's/    DNS Addresses: *(.*)/\1/p')
+          ssh-keyscan -p 9418 -t rsa msc-git02.msc-ge.com >> ~/.ssh/known_hosts
+          git clone ssh://gitolite@msc-git02.msc-ge.com:9418/msc_ol99/msc-ldk
+          chmod +x yocto-layers-demo/.github/ci-scripts/build-demos.sh
+          sed -i 's/core-image-base/${{ github.event.inputs.yocto-image }}/g' yocto-layers-demo/.github/ci-scripts/build-demos.sh
+          docker pull ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest
+          docker run --privileged --dns $DNS -h docker --mount type=bind,src=${{ env.SSH_AUTH_SOCK }},dst=${{ env.SSH_AUTH_SOCK }} --env SSH_AUTH_SOCK -v `pwd`/src:/src -v `pwd`/yocto-layers-demo/:/src/yocto-layers ghcr.io/avnet-iotconnect/meta-iotconnect/msc-iocto-sdk-kirkstone:latest "/src/yocto-layers/.github/ci-scripts/build-demos.sh"
+          cp src/msc-ldk/build/01047/tmp/deploy/images/sm2s-imx8mp/${{ github.event.inputs.yocto-image }}-sm2s-imx8mp.wic ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic
+          gzip -v ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic
+
+      - uses: hkusu/s3-upload-action@v2.1.0
+        id: s3-upload
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+          aws-bucket: 'iotconnect-sdk-images'
+          file-path: ${{ github.event.inputs.yocto-image }}-sm2s-imx8mp-demo.wic.gz
+          destination-dir: '${{ github.head_ref || github.ref_name }}/msc/'
+          bucket-root: '/MPU/'
+          public: true
+          output-file-url: 'true'
+          
+  clean:
+    runs-on: [self-hosted, build]
+    if: always()
+    needs:
+      [
+        build-sm2s-imx8mp
+      ]
+    steps:
+      - name: "clean build dir"
+        run: |
+          rm -rf docker-msc-ldk/
+          rm -rf msc-ldk/
+          rm -rf src/
+          rm -rf yocto-layers/
+          rm -rf yocto-layers-demo/
+          cd ../
+          rm -rf meta-iotconnect-demos/
+
+
+ # stop-self-hosted-runner:
+ #   runs-on: ubuntu-latest
+ #   needs:
+ #     [
+ #       start-self-hosted-runner,
+ #     ]
+ #   if: always()
+ #   env:
+ #   steps:
+ #     - name: Checkout simplecore-tools
+ #       uses: actions/checkout@v4.1.1
+ #       with:
+ #         ssh-key: ${{ secrets.PRIVATE_KEY }}
+ #     - name: Stop VM composite
+ #       uses: ./.github/ci-scripts/stop-self-hosted-runner
