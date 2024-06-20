@@ -4,8 +4,9 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 DEPENDS = "iotc-python-demo-service"
 RDEPENDS:${PN} = "python3-iotconnect-sdk bash"
 
-SRC_URI = "gitsm://github.com/avnet-iotconnect/meta-iotconnect-python-demo-source.git;protocol=https;branch=main"
-SRCREV="${AUTOREV}"
+SRC_URI = "git://github.com/avnet-iotconnect/meta-iotconnect-python-demo-source.git;protocol=https;branch=dev/use-pipes"
+SRCREV = "2dbd7130956ace3db3cd065a24cf32258c802e5f"
+PV = "0.1+git${SRCPV}"
 
 S="${WORKDIR}/git"
 
